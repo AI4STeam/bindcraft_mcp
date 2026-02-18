@@ -58,4 +58,3 @@ docker run --gpus all -it bindcraft-mcp
 ## CI/CD
 
 - `.github/workflows/docker.yml` — builds and pushes Docker image to GHCR on push to main or version tags
-- `.github/workflows/build-env.yml` — packs conda env and creates GitHub Release on `envs-v*` tags
