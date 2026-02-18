@@ -73,6 +73,24 @@ jobs:
           conda install -n base conda-pack -y
           $(conda info --base)/bin/conda-pack -p ./env -o bindcraft_mcp-env.tar.gz --ignore-editable-packages
 
+      - name: Split archive if larger than 1.9 GB
+        run: |
+          FILE=bindcraft_mcp-env.tar.gz
+          MAX_BYTES=$((1900 * 1024 * 1024))  # 1.9 GB to stay under 2 GB limit
+          FILE_SIZE=$(stat --format=%s "$FILE")
+          echo "Archive size: $FILE_SIZE bytes"
+
+          if [ "$FILE_SIZE" -gt "$MAX_BYTES" ]; then
+            echo "Archive exceeds 1.9 GB — splitting into parts..."
+            split -b 1900m "$FILE" "${FILE}.part-"
+            rm "$FILE"
+            ls -lh ${FILE}.part-*
+            echo "split=true" >> $GITHUB_ENV
+          else
+            echo "Archive fits in single file ($FILE_SIZE bytes)"
+            echo "split=false" >> $GITHUB_ENV
+          fi
+
       - name: Determine release tag
         id: tag
         run: |
@@ -90,22 +108,24 @@ jobs:
           body: |
             Pre-packaged conda environment for `bindcraft_mcp`.
 
-            **Usage in quick_setup.sh:**
+            **Download & Install:**
             ```bash
-            USE_PACKED_ENVS=1 bash quick_setup.sh
-            ```
+            # If single file:
+            wget -q https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}/bindcraft_mcp-env.tar.gz
+            mkdir -p bindcraft_mcp/env
+            tar xzf bindcraft_mcp-env.tar.gz -C bindcraft_mcp/env
+            source bindcraft_mcp/env/bin/activate && conda-unpack
 
-            **Usage in Google Colab:**
-            ```python
-            import os, subprocess
-            url = "https://github.com/<owner>/<repo>/releases/download/${{ steps.tag.outputs.tag }}/bindcraft_mcp-env.tar.gz"
-            subprocess.run(["wget", "-q", url])
-            os.makedirs("bindcraft_mcp/env", exist_ok=True)
-            subprocess.run(["tar", "xzf", "bindcraft_mcp-env.tar.gz", "-C", "bindcraft_mcp/env"])
-            subprocess.run(["bash", "-c", "source bindcraft_mcp/env/bin/activate && conda-unpack"])
+            # If split into parts (files named *.part-aa, *.part-ab, ...):
+            cat bindcraft_mcp-env.tar.gz.part-* > bindcraft_mcp-env.tar.gz
+            mkdir -p bindcraft_mcp/env
+            tar xzf bindcraft_mcp-env.tar.gz -C bindcraft_mcp/env
+            source bindcraft_mcp/env/bin/activate && conda-unpack
             ```
 
             > **Note:** PyRosetta may not be included if the license was unavailable during build.
             > AlphaFold2 weights (~5.3 GB) are NOT included — download separately with `quick_setup.sh`.
-          files: bindcraft_mcp-env.tar.gz
-          fail_on_unmatched_files: true
+          files: |
+            bindcraft_mcp-env.tar.gz
+            bindcraft_mcp-env.tar.gz.part-*
+          fail_on_unmatched_files: false
