@@ -38,10 +38,8 @@ RUN conda install -p /env \
     chex dm-haiku 'flax<0.10.0' dm-tree joblib ml-collections immutabledict optax \
     -c conda-forge -y
 
-# Install JAX (CPU version for broad compatibility; override with CUDA at runtime)
-RUN conda install -p /env \
-    'jax>=0.4,<=0.6.0' 'jaxlib>=0.4,<=0.6.0' \
-    -c conda-forge -y
+# Install JAX with CUDA 12 support for GPU acceleration
+RUN /env/bin/pip install --no-cache-dir 'jax[cuda12]>=0.4,<=0.6.0'
 
 # Install PyRosetta (may fail without license – non-fatal)
 RUN conda install -p /env pyrosetta pdbfixer \
@@ -72,7 +70,7 @@ COPY clean_scripts/ ./clean_scripts/
 COPY configs/ ./configs/
 
 # Create directories for runtime
-RUN mkdir -p tmp/inputs tmp/outputs jobs results repo/scripts/params
+RUN mkdir -p tmp/inputs tmp/outputs jobs results repo/scripts/params repo/scripts/functions
 
 # Clone BindCraft repository and set up scripts
 RUN git clone --depth 1 https://github.com/martinpacesa/BindCraft repo/BindCraft \
@@ -80,7 +78,22 @@ RUN git clone --depth 1 https://github.com/martinpacesa/BindCraft repo/BindCraft
     && cp -r repo/BindCraft/functions/* repo/scripts/functions/ 2>/dev/null || true \
     && chmod +x repo/scripts/functions/dssp repo/scripts/functions/DAlphaBall.gcc 2>/dev/null || true
 
+# Download AlphaFold2 weights into the image (~5.3 GB)
+RUN wget -q https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar \
+        -O /app/repo/scripts/params/alphafold_params.tar \
+    && tar -xf /app/repo/scripts/params/alphafold_params.tar -C /app/repo/scripts/params/ \
+    && rm -f /app/repo/scripts/params/alphafold_params.tar
+
+# Symlink so MCP tools can find scripts at /app/scripts
+RUN ln -s /app/repo/scripts /app/scripts
+
+# Copy examples (needed for default filter/advanced settings)
+COPY examples/ ./examples/
+
 ENV PYTHONPATH=/app/src:/app/clean_scripts
 ENV PATH=/env/bin:$PATH
+# Enable GPU access for NVIDIA Container Toolkit
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 CMD ["python", "src/bindcraft_mcp.py"]

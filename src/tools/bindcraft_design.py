@@ -131,6 +131,10 @@ def _run_command(
     run_env["CUDA_VISIBLE_DEVICES"] = str(device)
     run_env["XLA_FLAGS"] = "--xla_gpu_enable_triton_gemm=false"
     run_env["PYTHONUNBUFFERED"] = "1"
+    # Ensure scripts dir is on PYTHONPATH so 'from functions import *' resolves
+    if cwd:
+        existing = run_env.get("PYTHONPATH", "")
+        run_env["PYTHONPATH"] = f"{cwd}:{existing}" if existing else cwd
 
     stdout_lines: list[str] = []
     stderr_lines: list[str] = []
@@ -269,7 +273,6 @@ def bindcraft_design_binder(
             f"--settings={settings_json}",
             f"--filters={filters_json}",
             f"--advanced={advanced_json}",
-            f"--log-level={log_level}",
         ]
 
         logger.info(f"Running BindCraft on GPU {device}")
@@ -474,7 +477,6 @@ def bindcraft_submit(
             f"--settings={settings_json_path}",
             f"--filters={filters_json}",
             f"--advanced={advanced_json}",
-            f"--log-level={log_level}",
         ]
 
         # Setup environment
@@ -482,6 +484,10 @@ def bindcraft_submit(
         run_env["CUDA_VISIBLE_DEVICES"] = str(device)
         run_env["XLA_FLAGS"] = "--xla_gpu_enable_triton_gemm=false"
         run_env["PYTHONUNBUFFERED"] = "1"
+        # Ensure scripts dir is on PYTHONPATH so 'from functions import *' resolves
+        scripts_dir = str(bindcraft_path)
+        existing_pypath = run_env.get("PYTHONPATH", "")
+        run_env["PYTHONPATH"] = f"{scripts_dir}:{existing_pypath}" if existing_pypath else scripts_dir
 
         # Create log file for the background process
         log_file = output_path / "bindcraft_run.log"
