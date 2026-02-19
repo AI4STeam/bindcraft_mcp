@@ -56,7 +56,7 @@ RUN conda clean -a -y
 FROM continuumio/miniconda3:24.7.1-0 AS runtime
 
 RUN apt-get update && apt-get install -y \
-    libgomp1 git wget \
+    libgomp1 libgfortran5 git wget \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
