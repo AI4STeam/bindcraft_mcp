@@ -90,6 +90,10 @@ RUN ln -s /app/repo/scripts /app/scripts
 # Copy examples (needed for default filter/advanced settings)
 COPY examples/ ./examples/
 
+# Make /app directory readable and writable by all users (for non-root execution)
+RUN chmod -R 755 /app && \
+    chmod -R 777 /app/tmp /app/jobs /app/results
+
 ENV PYTHONPATH=/app/src:/app/clean_scripts
 ENV PATH=/env/bin:$PATH
 # Enable GPU access for NVIDIA Container Toolkit

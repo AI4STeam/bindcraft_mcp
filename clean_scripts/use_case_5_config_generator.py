@@ -315,6 +315,9 @@ def run_config_generator(
     # Determine output directory
     if output_file:
         output_dir = Path(output_file)
+        # If user passed a file path (e.g. ending in .json), use its parent as the directory
+        if output_dir.suffix:
+            output_dir = output_dir.parent
     else:
         output_dir = Path(f"results/{final_config['name']}_configs")
 
