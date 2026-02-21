@@ -1,6 +1,6 @@
 # BindCraft MCP
 
-**Model Context Protocol (MCP) server for protein binder design using BindCraft**
+**Model Context Protocol (MCP) server for protein binder design using BindCraft via Docker**
 
 Design high-affinity protein binders against target proteins using:
 - **AF2 Hallucination** — Generate binder backbone conformations
@@ -8,61 +8,116 @@ Design high-affinity protein binders against target proteins using:
 - **AF2 Validation** — Predict and validate complex structures
 - **PyRosetta Scoring** — Evaluate interface quality and energy
 
-## Quick Start
+## Quick Start with Docker
 
-### Approach 1: Automated Setup (Recommended)
+### Approach 1: Pull Pre-built Image from GitHub
 
-The fastest way to get started:
+The fastest way to get started. A pre-built Docker image is automatically published to GitHub Container Registry on every release.
 
 ```bash
-cd bindcraft_mcp
-bash quick_setup.sh
+# Pull the latest image
+docker pull ghcr.io/macromnex/bindcraft_mcp:latest
+
+# Register with Claude Code (runs as current user to avoid permission issues)
+claude mcp add bindcraft -- docker run -i --rm --user `id -u`:`id -g` --gpus all --ipc=host -v `pwd`:`pwd` ghcr.io/macromnex/bindcraft_mcp:latest
 ```
 
-This creates the conda environment, clones BindCraft, installs all dependencies, and displays the Claude Code configuration.
+**Note:** Run from your project directory. `${pwd}` expands to the current working directory.
 
 **Requirements:**
-- Conda or Mamba (mamba recommended)
-- Python 3.10+
-- NVIDIA GPU with CUDA (recommended for design tasks)
+- Docker with GPU support (`nvidia-docker` or Docker with NVIDIA runtime)
+- Claude Code installed
 
-### Approach 2: Manual Setup
-
-For custom installations, see [details.md](details.md#installation-details).
+That's it! The BindCraft MCP server is now available in Claude Code.
 
 ---
 
-## MCP Server Installation
+### Approach 2: Build Docker Image Locally
 
-After running the setup script, register the server with Claude Code:
+Build the image yourself and install it into Claude Code. Useful for customization or offline environments.
 
 ```bash
-# Option 1: Using fastmcp (Recommended)
-fastmcp install src/bindcraft_mcp.py --name bindcraft
+# Clone the repository
+git clone https://github.com/MacromNex/bindcraft_mcp.git
+cd bindcraft_mcp
 
-# Option 2: Manual installation
-claude mcp add bindcraft -- $(pwd)/env/bin/python $(pwd)/src/bindcraft_mcp.py
+# Build the Docker image
+docker build -t bindcraft_mcp:latest .
 
-# Verify installation
-claude mcp list
+# Register with Claude Code (runs as current user to avoid permission issues)
+claude mcp add bindcraft -- docker run -i --rm --user `id -u`:`id -g` --gpus all --ipc=host -v `pwd`:`pwd` bindcraft_mcp:latest
 ```
+
+**Note:** Run from your project directory. `${pwd}` expands to the current working directory.
+
+**Requirements:**
+- Docker with GPU support
+- Claude Code installed
+- Git (to clone the repository)
+
+**About the Docker Flags:**
+- `-i` — Interactive mode for Claude Code
+- `--rm` — Automatically remove container after exit
+- `--user ${id -u}:${id -g}` — Runs the container as your current user, so output files are owned by you (not root)
+- `--gpus all` — Grants access to all available GPUs
+- `--ipc=host` — Uses host IPC namespace for better performance
+- `-v` — Mounts your project directory so the container can access your data
 
 ---
 
 ## Verify Installation
 
-You should now see the BindCraft MCP server listed:
+After adding the MCP server, you can verify it's working:
 
 ```bash
+# List registered MCP servers
 claude mcp list
+
+# You should see 'bindcraft' in the output
 ```
 
-In Claude Code, you can use these 5 tools:
-- `bindcraft_design_binder` — Quick synchronous binder design
-- `bindcraft_submit` — Submit async design jobs
+In Claude Code, you can now use all 5 BindCraft tools:
+- `bindcraft_design_binder` — Synchronous binder design
+- `bindcraft_submit` — Async design job submission
 - `bindcraft_check_status` — Monitor job progress
 - `generate_config` — Auto-generate configurations from PDB
 - `validate_config` — Validate configuration files
+
+---
+
+## Usage Examples
+
+Once registered, you can use the BindCraft tools directly in Claude Code. Here are some common workflows:
+
+### Example 1: Quick Binder Design
+
+```
+Design a binder against the target protein at /path/to/target.pdb. Use the bindcraft_design_binder tool with 3 designs, targeting chain A, with binder lengths between 65 and 150 residues.
+```
+
+### Example 2: Generate Configuration from PDB
+
+```
+I have a target protein at /path/to/target.pdb. Can you generate a configuration file using generate_config with detailed analysis? Target hotspot residues should be automatically identified.
+```
+
+### Example 3: Submit Async Design Job
+
+```
+Submit an async binder design job for the target at /path/to/target.pdb. Use bindcraft_submit with 10 designs, chain A, and output to /path/to/output/. Then monitor the job with bindcraft_check_status.
+```
+
+### Example 4: Validate Configuration File
+
+```
+I have a configuration file at /path/to/config.json. Can you validate it using validate_config to ensure all parameters are correct before running the design?
+```
+
+### Example 5: Batch Design with Auto Config
+
+```
+I have a target PDB at /path/to/target.pdb. First, generate an optimized config using generate_config, then submit an async design job with bindcraft_submit for 5 designs, and save results to /path/to/results/.
+```
 
 ---
 
@@ -75,37 +130,7 @@ In Claude Code, you can use these 5 tools:
   - Configuration options
   - Troubleshooting
 
-- **Quick Start in Claude Code**: Try these example prompts:
-
-```
-Generate a binder for @examples/data/PDL1.pdb with 3 designs targeting chain A
-```
-
-```
-Generate configuration for @examples/data/PDL1.pdb with detailed analysis
-```
-
-```
-Submit an async binder design job for @examples/data/PDL1.pdb with 5 designs
-```
-
----
-
-## Directory Structure
-
-```
-./
-├── README.md               # Quick start (this file)
-├── details.md              # Comprehensive documentation
-├── env/                    # Conda environment
-├── src/
-│   ├── bindcraft_mcp.py    # MCP server (main entry point)
-│   └── tools/              # Tool implementations
-├── clean_scripts/          # 5 standalone use-case scripts
-├── examples/data/          # Demo data (PDL1.pdb)
-├── configs/                # Configuration templates
-└── repo/                   # BindCraft repository
-```
+- **Local Setup (Alternative to Docker)**: See [details.md](details.md#installation-details) for conda-based environment setup if you prefer to run locally without Docker.
 
 ---
 
@@ -116,62 +141,35 @@ Submit an async binder design job for @examples/data/PDL1.pdb with 5 designs
 ✅ **Batch Processing** — Process multiple targets concurrently
 ✅ **Job Management** — Complete lifecycle tracking and monitoring
 ✅ **Auto Config** — Generate optimized parameters from PDB files
-✅ **GPU Acceleration** — Full CUDA and JAX/XLA support
+✅ **GPU Acceleration** — Full CUDA and JAX/XLA support via Docker
 ✅ **Error Handling** — Robust error reporting and recovery
 
 ---
 
-## Local Script Usage
+## GPU Support
 
-You can also run the tools directly without MCP:
-
-```bash
-# create environment
-bash quick_setup.sh
-mamba activate ./env
-
-# Quick design
-python clean_scripts/use_case_1_quick_design.py \
-  --input examples/data/PDL1.pdb \
-  --output results/
-
-# Async job submission
-python clean_scripts/use_case_2_async_submission.py \
-  --input examples/data/PDL1.pdb --num-designs 3
-
-# Monitor progress
-python clean_scripts/use_case_3_monitor_progress.py --output results/
-
-# Batch processing
-python clean_scripts/use_case_4_batch_design.py --input examples/data/
-
-# Config generation
-python clean_scripts/use_case_5_config_generator.py \
-  --input examples/data/PDL1.pdb --validate
-```
-
-See [details.md](details.md#local-usage-scripts) for full parameter documentation.
+Both Docker approaches fully support:
+- Multi-GPU systems (all GPUs automatically available in container)
+- Single GPU setup
+- CPU-only inference (via `--gpus '""'` if needed)
 
 ---
 
 ## Troubleshooting
 
-**Environment not found?**
+**Docker not found?**
 ```bash
-bash quick_setup.sh
+docker --version  # Install Docker if missing
 ```
 
-**GPU not available?**
-```bash
-nvidia-smi  # Check NVIDIA drivers
-python -c "import jax; print(jax.devices())"  # Check JAX
-```
+**GPU not accessible?**
+- Ensure NVIDIA Docker runtime is installed
+- Check with `docker run --gpus all ubuntu nvidia-smi`
 
-**MCP server not registered?**
+**Claude Code not found?**
 ```bash
-claude mcp list
-claude mcp remove bindcraft
-fastmcp install src/bindcraft_mcp.py --name bindcraft
+# Install Claude Code
+npm install -g @anthropic-ai/claude-code
 ```
 
 See [details.md](details.md#troubleshooting) for more troubleshooting guidance.

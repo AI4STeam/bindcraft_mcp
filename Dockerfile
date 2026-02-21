@@ -94,8 +94,21 @@ COPY examples/ ./examples/
 RUN chmod -R 755 /app && \
     chmod -R 777 /app/tmp /app/jobs /app/results
 
+# Configure cache directories for non-root users (fixes matplotlib/fontconfig permission errors)
+# When running as non-root user (--user flag), tools can't write to /.config or /.cache
+RUN mkdir -p /app/.cache /app/.config /app/.fontconfig && \
+    chmod -R 777 /app/.cache /app/.config /app/.fontconfig
+
 ENV PYTHONPATH=/app/src:/app/clean_scripts
 ENV PATH=/env/bin:$PATH
+
+# Configure cache directories for Python tools (matplotlib, fontconfig, etc.)
+# These prevent "Permission denied" errors when running as non-root
+ENV HOME=/app
+ENV MPLCONFIGDIR=/app/.config/matplotlib
+ENV XDG_CACHE_HOME=/app/.cache
+ENV FONTCONFIG_PATH=/app/.fontconfig
+
 # Enable GPU access for NVIDIA Container Toolkit
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
