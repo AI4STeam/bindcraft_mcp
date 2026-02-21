@@ -118,4 +118,10 @@ ENV FONTCONFIG_PATH=/app/.fontconfig
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
+# Allow any UID to resolve via NSS (fixes getpwuid KeyError for --user flag)
+RUN chmod 666 /etc/passwd
+# Create entrypoint that adds the runtime UID to /etc/passwd if missing
+RUN printf '#!/bin/bash\nif ! whoami &>/dev/null; then\n  echo "appuser:x:$(id -u):$(id -g)::/app:/bin/bash" >> /etc/passwd\nfi\nexec "$@"\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["python", "src/bindcraft_mcp.py"]
