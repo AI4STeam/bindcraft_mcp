@@ -73,7 +73,12 @@ COPY configs/ ./configs/
 RUN mkdir -p tmp/inputs tmp/outputs jobs results repo/scripts/params repo/scripts/functions
 
 # Clone BindCraft repository and set up scripts
-RUN git clone --depth 1 https://github.com/martinpacesa/BindCraft repo/BindCraft \
+RUN mkdir -p repo && \
+    for attempt in 1 2 3; do \
+      echo "Clone attempt $attempt/3"; \
+      git clone --depth 1 https://github.com/martinpacesa/BindCraft repo/BindCraft && break; \
+      if [ $attempt -lt 3 ]; then sleep 5; fi; \
+    done \
     && cp repo/BindCraft/bindcraft.py repo/scripts/run_bindcraft.py \
     && cp -r repo/BindCraft/functions/* repo/scripts/functions/ 2>/dev/null || true \
     && chmod +x repo/scripts/functions/dssp repo/scripts/functions/DAlphaBall.gcc 2>/dev/null || true
