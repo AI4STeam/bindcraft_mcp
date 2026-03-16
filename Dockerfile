@@ -25,14 +25,6 @@ ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ARG NO_PROXY
 
-# Set environment variables for proxy (if provided)
-ENV HTTP_PROXY=${HTTP_PROXY}
-ENV HTTPS_PROXY=${HTTPS_PROXY}
-ENV NO_PROXY=${NO_PROXY}
-ENV http_proxy=${HTTP_PROXY}
-ENV https_proxy=${HTTPS_PROXY}
-ENV no_proxy=${NO_PROXY}
-
 # ---------- Stage 1: builder ----------
 FROM continuumio/miniconda3:24.7.1-0 AS builder
 
