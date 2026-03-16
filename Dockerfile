@@ -5,8 +5,13 @@
 #   1. builder  – installs all conda/pip dependencies
 #   2. runtime  – minimal image with only what's needed to run
 #
-# Build:
+# Build (without proxy):
 #   docker build -t bindcraft-mcp .
+#
+# Build (with proxy - recommended for China):
+#   docker build --build-arg HTTP_PROXY=http://host.docker.internal:7890 \
+#                --build-arg HTTPS_PROXY=http://host.docker.internal:7890 \
+#                -t bindcraft-mcp .
 #
 # Run (GPU):
 #   docker run --gpus all -it bindcraft-mcp
@@ -15,8 +20,34 @@
 #   docker run -it bindcraft-mcp
 ###############################################################################
 
+# Proxy configuration (pass via --build-arg)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
+# Set environment variables for proxy (if provided)
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
+ENV http_proxy=${HTTP_PROXY}
+ENV https_proxy=${HTTPS_PROXY}
+ENV no_proxy=${NO_PROXY}
+
 # ---------- Stage 1: builder ----------
 FROM continuumio/miniconda3:24.7.1-0 AS builder
+
+# Re-declare ARGs for this stage
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
+# Set environment variables for proxy in builder stage
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
+ENV http_proxy=${HTTP_PROXY}
+ENV https_proxy=${HTTPS_PROXY}
+ENV no_proxy=${NO_PROXY}
 
 RUN apt-get update && apt-get install -y \
     git gcc g++ wget \
@@ -54,6 +85,19 @@ RUN conda clean -a -y
 
 # ---------- Stage 2: runtime ----------
 FROM continuumio/miniconda3:24.7.1-0 AS runtime
+
+# Re-declare ARGs for this stage
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
+# Set environment variables for proxy in runtime stage
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
+ENV http_proxy=${HTTP_PROXY}
+ENV https_proxy=${HTTPS_PROXY}
+ENV no_proxy=${NO_PROXY}
 
 RUN apt-get update && apt-get install -y \
     libgomp1 libgfortran5 git wget \
@@ -117,6 +161,14 @@ ENV FONTCONFIG_PATH=/app/.fontconfig
 # Enable GPU access for NVIDIA Container Toolkit
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
+
+# Reset proxy environment variables (don't carry proxy into runtime)
+ENV HTTP_PROXY=
+ENV HTTPS_PROXY=
+ENV NO_PROXY=
+ENV http_proxy=
+ENV https_proxy=
+ENV no_proxy=
 
 # Allow any UID to resolve via NSS (fixes getpwuid KeyError for --user flag)
 RUN chmod 666 /etc/passwd
