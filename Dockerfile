@@ -47,6 +47,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Configure conda to use USTC mirror (China)
+RUN mkdir -p /root/.conda && \
+    printf 'channels:\n  - nodefaults\ncustom_channels:\n  conda-forge: https://mirrors.ustc.edu.cn/anaconda/cloud\n  bioconda: https://mirrors.ustc.edu.cn/anaconda/cloud\nshow_channel_urls: true\n' > /root/.condarc
+
 # Create conda environment with all dependencies
 RUN conda create -p /env python=3.10 -y
 
@@ -61,14 +65,15 @@ RUN conda install -p /env \
     chex dm-haiku 'flax<0.10.0' dm-tree joblib ml-collections immutabledict optax \
     -c conda-forge -y
 
-# Install JAX with CUDA 12 support for GPU acceleration
-RUN /env/bin/pip install --no-cache-dir 'jax[cuda12]>=0.4,<=0.6.0'
+# Configure pip to use USTC mirror and install JAX with CUDA 12 support
+RUN /env/bin/pip config set global.index-url https://mirrors.ustc.edu.cn/pypi/simple && \
+    /env/bin/pip install --no-cache-dir 'jax[cuda12]>=0.4,<=0.6.0'
 
 # Install PyRosetta (may fail without license – non-fatal)
 RUN conda install -p /env pyrosetta pdbfixer \
     --channel https://conda.graylab.jhu.edu -c conda-forge -y 2>/dev/null || true
 
-# Install pip packages
+# Install pip packages (using USTC mirror configured above)
 RUN /env/bin/pip install --no-cache-dir fastmcp==2.13.1 loguru click
 RUN /env/bin/pip install --no-cache-dir git+https://github.com/sokrypton/ColabDesign.git --no-deps || true
 
