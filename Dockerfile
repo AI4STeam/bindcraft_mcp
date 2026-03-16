@@ -49,7 +49,8 @@ WORKDIR /app
 
 # Configure conda to use USTC mirror (China)
 RUN mkdir -p /root/.conda && \
-    printf 'channels:\n  - nodefaults\ncustom_channels:\n  conda-forge: https://mirrors.ustc.edu.cn/anaconda/cloud\n  bioconda: https://mirrors.ustc.edu.cn/anaconda/cloud\nshow_channel_urls: true\n' > /root/.condarc
+    printf 'channels:\n  - https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge/\nshow_channel_urls: true\n' > /root/.condarc && \
+    conda clean -i
 
 # Create conda environment with all dependencies
 RUN conda create -p /env python=3.10 -y
